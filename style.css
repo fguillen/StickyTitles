@@ -2,6 +2,7 @@
   margin: 100px;
   height: 400px;
   overflow-y: scroll;
+  padding: 50px;
 }
 
 #container h1 {

@@ -1,7 +1,10 @@
 class StickyTitles {
-  constructor(titlesSelector, containerSelector) {
-    this.titles = document.querySelectorAll(titlesSelector);
+  constructor(titlesSelector, containerSelector, distanceFromTopDetection) {
+    this.titles = Array.from(document.querySelectorAll(titlesSelector));
     this.container = document.querySelector(containerSelector);
+
+    // Security buffer number to check if the intersection has happened in the top of the container
+    this.distanceFromTopDetection = distanceFromTopDetection;
   }
 
   start() {
@@ -19,9 +22,15 @@ class StickyTitles {
   }
 
   observerOptions() {
+    console.log("this.container:", this.container);
+    const containerPaddingTop = window.getComputedStyle(this.container).getPropertyValue("padding-top");
+    const containerPaddingTopInPx = parseInt(containerPaddingTop);
+    console.log("containerPaddingTop:", containerPaddingTop);
+    console.log("containerPaddingTopInPx:", containerPaddingTopInPx);
+
     return {
       root: this.container,
-      rootMargin: "-100px 0px 0px 0px", // 20 pixels (magic number) from top margin intersection starts
+      rootMargin: `-${containerPaddingTopInPx + 10}px 0px 0px 0px`,
       threshold: [1],
     };
   }
@@ -49,16 +58,23 @@ class StickyTitles {
     console.log("isIntersecting:", isIntersecting);
     console.log("top:", top);
 
-    const magicNumber = 400; // I hate this but I don't know how to do it better
-    if (isIntersecting && top < magicNumber) {
+    console.log("intersectionRect.top:", entry.intersectionRect.top);
+    console.log("rootBounds.top:", entry.rootBounds.top);
+
+    console.log("intersectionRect.bottom:", entry.intersectionRect.bottom);
+    console.log("rootBounds.bottom:", entry.rootBounds.bottom);
+
+    if (isIntersecting && Math.abs(entry.intersectionRect.top - entry.rootBounds.top) < this.distanceFromTopDetection) {
       this.delinkTop(entry.target);
-    } else if (!isIntersecting && top < magicNumber) {
+    } else if (!isIntersecting && Math.abs(entry.intersectionRect.top - entry.rootBounds.top) < this.distanceFromTopDetection) {
       this.linkTop(entry.target)
     }
   }
   linkTop(element) {
     console.log("linkTop:", element);
     this.allPreviousElementsTransparent(element, this.titles);
+    this.allNextElementsVisible(element, this.titles);
+    this.elementVisible(element)
   }
 
   delinkTop(element) {
@@ -66,39 +82,61 @@ class StickyTitles {
     this.previousElementVisible(element, this.titles);
   }
 
-  allPreviousElementsTransparent(element, familyElements) {
+  allPreviousElementsTransparent(element) {
     console.log("allPreviousElementsTransparent:", element);
+    const index = this.indexElement(element);
+    console.log("index:", index);
 
-    for (const familyElement of familyElements) {
-      if (familyElement == element) {
-        break;
-      } else {
-        familyElement.classList.remove("visible");
-        familyElement.classList.add("transparent");
-      }
-    };
+    // First element has not previous
+    if (index === 0) return;
+
+    const previousElements = this.titles.slice(0, index);
+    previousElements.forEach((e) => this.elementTransparent(e));
   }
 
-  previousElementVisible(element, familyElements) {
+  allNextElementsVisible(element) {
+    console.log("allNextElementsVisible:", element);
+    const index = this.indexElement(element);
+
+    // Last element has not next
+    if (index === this.titles.size - 1) return;
+
+    const nextElements = this.titles.slice(index + 1);
+    nextElements.forEach((e) => this.elementVisible(e));
+  }
+
+  previousElementVisible(element) {
     console.log("previousElementVisible:", element);
 
-    familyElements = Array.from(familyElements);
-    const indexElement =
-      familyElements.findIndex((familyElement) => {
+    // First element has not previous
+    if (this.indexElement(element) === 0) return;
+
+    const previousElement = this.titles[this.indexElement(element) - 1];
+    this.elementVisible(previousElement)
+  }
+
+  elementVisible(element) {
+    console.log("elementVisible:", element);
+    element.classList.remove("transparent");
+    element.classList.add("visible");
+  }
+
+  elementTransparent(element) {
+    console.log("elementTransparent:", element);
+    element.classList.remove("visible");
+    element.classList.add("transparent");
+  }
+
+  indexElement(element) {
+    const result =
+      this.titles.findIndex((familyElement) => {
         return familyElement == element;
       });
 
-    // First element has not previous
-    if (indexElement === 0) {
-      return;
-    }
-
-    const previousElement = familyElements[indexElement - 1];
-    previousElement.classList.remove("transparent");
-    previousElement.classList.add("visible");
+    return result;
   }
 }
 
-new StickyTitles(".message.role-user", "#message-list").start();
+// new StickyTitles(".message.role-user", "#messages-list", 200).start();
 
-new StickyTitles("h1", "#container").start();
+new StickyTitles("h1", "#container", 20).start();
