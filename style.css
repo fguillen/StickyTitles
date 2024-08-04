@@ -1,0 +1,20 @@
+#container {
+  margin: 100px;
+  height: 400px;
+  overflow-y: scroll;
+}
+
+#container h1 {
+  display: inline;
+  background-color: darkkhaki;
+}
+
+#container h1.transparent {
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+
+#container h1.visible {
+  transition: opacity 0.3s;
+  opacity: 1;
+}
